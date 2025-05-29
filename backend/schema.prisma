@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Class {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  lessons Lesson[]
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id])
+  day       Int      // 0 = Monday
+  startTime String
+  endTime   String
+  subject   String
+  teacher   String
+  room      String
+}
+
+// Add this User model for authentication:
+model User {
+  id        String   @id @default(cuid())
+  googleId  String   @unique
+  email     String   @unique
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
