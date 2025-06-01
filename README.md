@@ -48,6 +48,3 @@ pnpm seed
 pnpm start
 ```
 
-# Disclamer
-
-Il codice fornito è scritto principalmente con un AI.
