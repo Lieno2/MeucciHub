@@ -4,34 +4,50 @@ import * as cheerio from 'cheerio';
 
 const prisma = new PrismaClient();
 
-function getReadableErrorMessage(error: unknown, context: string = 'An unexpected error occurred'): string {
-  if (axios.isAxiosError(error)) {
-    const status = error.response ? ` (Status: ${error.response.status})` : '';
-    const data = error.response && typeof error.response.data === 'string' ? ` - Details: ${error.response.data}` : '';
-    return `${context}: Network or HTTP error${status}${data} - ${error.message}`;
-  }
-  if (error instanceof Error) {
-    return `${context}: ${error.message}`;
-  }
-  return `${context}: ${String(error)}`;
-}
-
 async function fetchHtmlContent(url: string): Promise<string> {
   try {
     const response = await axios.get(url, { timeout: 10000 });
     return response.data;
   } catch (error) {
-    const errorMessage = getReadableErrorMessage(error, `Failed to fetch content from URL: ${url}`);
-    console.error(`❌ ${errorMessage}`);
-    throw new Error(errorMessage);
+    console.error(`❌ ${error}`);
+    throw new Error(String(error));
   }
+}
+
+function addMinutes(timeStr: string, minsToAdd: number): string {
+  const [hourStr, minuteStr] = timeStr.split(':');
+  let hour = parseInt(hourStr, 10);
+  let minute = parseInt(minuteStr, 10);
+
+  minute += minsToAdd;
+  while (minute >= 60) {
+    minute -= 60;
+    hour += 1;
+  }
+
+  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+}
+
+function calculateEndTime(rowIndex: number, startTime: string): string {
+  // Define durations in minutes for each hour block (0-based index)
+  const durations = [50, 60, 55, 55, 55, 55, 50];
+
+  // Define breaks after which we add extra minutes (row indices after which break occurs)
+
+  // Base endTime = startTime + duration + total extra breaks before this lesson
+  const duration = durations[rowIndex] ?? 50; // fallback 50 min if rowIndex out of range
+
+  // Add duration + break minutes to startTime
+  const endTime = addMinutes(startTime, duration);
+
+  return endTime;
 }
 
 function formatTime(timeStr: string | undefined): string {
   if (!timeStr) return '';
   const [hour, minute] = timeStr.split('.');
   if (!hour || !minute) return '';
-  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  return `${hour.padStart(2, '0')}:${minute}`;
 }
 
 function looksLikeClassroom(text: string): boolean {
@@ -65,7 +81,10 @@ async function main() {
       const linkText = $index(el).text().trim();
       const href = $index(el).attr('href');
       if (href && validClassNameRegex.test(linkText)) {
-        classScheduleLinks.push({ name: linkText.replace(/\.html$/, '').replace(/-/g, ''), url: `${baseUrl}${href}` });
+        classScheduleLinks.push({
+          name: linkText.replace(/\.html$/, '').replace(/-/g, ''),
+          url: `${baseUrl}${href}`,
+        });
       }
     });
 
@@ -76,7 +95,7 @@ async function main() {
 
     console.log(`✅ Found ${classScheduleLinks.length} class schedule links.`);
   } catch (error) {
-    console.error(`❌ ${getReadableErrorMessage(error, 'Stage 1 error')}`);
+    console.error(error);
     process.exit(1);
   }
 
@@ -113,78 +132,128 @@ async function main() {
         const cells = $(row).find('td');
         if (cells.length === 0) return;
 
+        // First cell: start time
         const startTimeRaw = $(cells[0]).text().trim();
         const startTime = formatTime(startTimeRaw);
+        const endTime = calculateEndTime(rowIndex, startTime);
 
         if (!startTime) {
           console.log(`   [Row ${rowIndex}] Missing start time. Skipping row.`);
           return;
         }
 
-        for (let dayIndex = 1; dayIndex <= 5; dayIndex++) {
-          const cell = $(cells[dayIndex]);
-          const p = cell.find('p');
-          if (p.length < 3) {
-            console.log(`   [Row ${rowIndex}, Day ${dayIndex}] Skipped (less than 3 <p>)`);
+        let dayIndex = 1;
+        for (let i = 1; i < cells.length; i++) {
+
+          const cell = $(cells[i]);
+          if (!cell) {
+            dayIndex++;
+            continue
+          }
+
+          // Collect all data from <p> inside the cell in order
+          const paragraphs = cell.find('p').toArray();
+
+          // Filter out empty paragraphs (whitespace or &nbsp;)
+          const nonEmptyParagraphs = paragraphs.filter(p => {
+            const text = $(p).text().replace(/\u00a0/g, '').trim();
+            return text.length > 0;
+          });
+
+          if (nonEmptyParagraphs.length === 0) {
+            dayIndex++;
             continue;
           }
 
-          const subject = cleanText(p.eq(0).text());
-          if (!subject) continue;
+          // Extract text from each <p>, including anchors inside
+          const dataElements: string[] = [];
 
-          const prof1 = cleanText(p.eq(1).text());
-          const p3Text = cleanText(p.eq(2).text());
+          nonEmptyParagraphs.forEach(p => {
+            const pEl = $(p);
+            pEl.contents().each((_, el) => {
+              const $el = $(el);
+              if ($el.is('a')) {
+                const text = cleanText($el.text());
+                if (text) dataElements.push(text);
+              } else if (el.type === 'text') {
+                const text = cleanText($el.text());
+                if (text) dataElements.push(text);
+              }
+            });
+          });
 
-          if (!p3Text) {
-            console.log(`   [Row ${rowIndex}, Day ${dayIndex}] Skipped (p3 empty)`);
+          // Expect dataElements to contain [subject, teacher, room] or similar
+          if (dataElements.length < 2) {
+            console.log(`   [Row ${rowIndex}, Day ${dayIndex}] Insufficient lesson data:`, dataElements);
+            dayIndex++;
             continue;
           }
 
-          let prof2 = '';
-          let room = '';
+          const subject = dataElements[0];
+          let teacher = dataElements[1];
 
-          if (looksLikeClassroom(p3Text)) {
-            room = p3Text;
-          } else {
-            prof2 = p3Text;
+          if(dataElements.length >= 4)
+              teacher += dataElements[2];
+
+          let room = dataElements[dataElements.length-1];
+
+          if(dataElements.length == 5)
+            room += dataElements[3];
+
+          if (!subject) {
+            console.log(`   [Row ${rowIndex}, Day ${dayIndex}] Missing subject. Skipping.`);
+            dayIndex++;
+            continue;
           }
 
-          if (p.length > 3) {
-            const p4Text = cleanText(p.eq(3).text());
-            if (!room && looksLikeClassroom(p4Text)) {
-              room = p4Text;
-            } else if (!prof2) {
-              prof2 = p4Text;
-            }
+
+
+          if (!teacher) {
+            console.log(`   [Row ${rowIndex}, Day ${dayIndex}] Missing teacher. Skipping.`);
+            dayIndex++;
+            continue;
           }
 
-          lessonsToCreate.push({
+          const lesson: Prisma.LessonCreateInput = {
             class: { connect: { id: createdClass!.id } },
             day: dayIndex - 1,
             startTime,
-            endTime: '',
+            endTime,
             subject,
-            teacher: [prof1, prof2].filter(Boolean).join(', '),
+            teacher,
             room,
-          });
+          };
 
-          console.log(`   ✅ [Row ${rowIndex}, Day ${dayIndex}] ${subject} | ${[prof1, prof2].filter(Boolean).join(', ')} | ${room}`);
+          lessonsToCreate.push(lesson);
+          console.log(`   ✅ [Row ${rowIndex}, Day ${dayIndex}] ${subject} | ${teacher} | ${room}`);
+
+          if(cells.length-1 > 5) {
+
+            if (i + 1 < cells.length) {
+              const next = $(cells[i + 1]);
+              const nextColspan = parseInt(next.attr('colspan') || '1', 10);
+              const currentColspan = parseInt(cell.attr('colspan') || '1', 10);
+              if (!(nextColspan == 1 && currentColspan == 1))
+                dayIndex++;
+
+            }
+
+          } else
+            dayIndex++;
+
         }
       });
 
-      if (lessonsToCreate.length > 0) {
-        for (const lesson of lessonsToCreate) {
-          await prisma.lesson.create({ data: lesson });
-        }
-        totalLessons += lessonsToCreate.length;
-        console.log(`   ✅ Seeded ${lessonsToCreate.length} lessons for "${classData.name}".`);
-      } else {
-        console.warn(`   ⚠️ No lessons found for "${classData.name}".`);
+      // Insert all lessons for this class
+      for (const lesson of lessonsToCreate) {
+        await prisma.lesson.create({ data: lesson });
       }
 
+      totalLessons += lessonsToCreate.length;
       seededClasses++;
+      console.log(`   ✅ Seeded ${lessonsToCreate.length} lessons for "${classData.name}".`);
     } catch (err) {
-      console.error(`❌ ${getReadableErrorMessage(err, `Processing "${classData.name}"`)}`);
+      console.error(`❌ Error processing class ${classData.name}:`, err);
       skippedClasses++;
     }
   }

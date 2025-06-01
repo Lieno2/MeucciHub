@@ -1,0 +1,21 @@
+{
+	"/": [
+		"src/routes/+page.ts",
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/circolari": [
+		"src/routes/circolari/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/home": [
+		"src/routes/+layout.ts"
+	],
+	"/login": [
+		"src/routes/+layout.ts"
+	],
+	"/schedule": [
+		"src/routes/schedule/+page.ts",
+		"src/routes/+layout.ts"
+	]
+}
