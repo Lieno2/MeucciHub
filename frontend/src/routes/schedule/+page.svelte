@@ -90,7 +90,7 @@
     <select
             bind:value={selectedClassId}
             on:change={onClassChange}
-            class="mb-4 sm:mb-6 p-2 rounded bg-gray-800 text-white w-full sm:w-auto"
+            class="mb-4 sm:mb-6 p-2 rounded bg-gray-800 text-white w-full sm:w-auto popup-content"
     >
         {#each data.classes as cls}
             <option value={cls.id}>{cls.name}</option>
@@ -118,19 +118,19 @@
 
             {#each timeSlots as time}
                 <div
-                        class="border border-gray-700 p-2 bg-gray-800 font-mono text-center whitespace-nowrap select-none"
+                        class="border border-gray-700 p-2 bg-gray-800 font-mono text-center box-border whitespace-nowrap select-none"
                 >
                     {time}
                 </div>
 
                 {#each days as _, dayIndex}
                     <div
-                            class="border border-gray-700 p-3 min-h-[70px] bg-gray-900 relative cursor-pointer hover:bg-gray-700 select-text rounded"
+                            class="border border-gray-700 min-h-[70px] p-3 bg-gray-900 relative cursor-pointer hover:bg-gray-700 select-text rounded box-border"
                             title="Click to see all lessons"
                             on:click={() => openModal(dayIndex, time, getLessons(dayIndex, time)[0]?.subject)}
                     >
                         {#if getLessons(dayIndex, time).length > 0}
-                            <div class="truncate font-bold">{getLessons(dayIndex, time)[0].subject}</div>
+                            <div class="text-center font-bold box-border break-words leading-tight" style="hyphens: auto;">{getLessons(dayIndex, time)[0].subject}</div>
                             {#if getLessons(dayIndex, time).length > 1}
                                 <div class="more-icon" aria-label="Multiple lessons">&#x22EE;</div>
                             {/if}
@@ -166,11 +166,10 @@
             <div class="space-y-3 max-h-96 overflow-y-auto popup-content">
                 {#each modalLessons as lesson}
                     <div class="bg-gray-700 p-3 rounded shadow-sm">
-                        <div><strong>Materia:</strong> {lesson.subject}</div>
+			<div><strong>Materia:</strong> {lesson.subject}</div>
                         <div><strong>Docente:</strong> {lesson.teacher}</div>
                         <div><strong>Aula:</strong> {lesson.room}</div>
-                        <div><strong>Ora inizio:</strong> {lesson.startTime}</div>
-                        <div><strong>Ora fine:</strong> {lesson.endTime || 'N/A'}</div>
+                        <div><strong>Orario:</strong> {lesson.startTime} - {lesson.endTime || 'N/A'}</div>
                     </div>
                 {/each}
             </div>

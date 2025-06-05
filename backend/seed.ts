@@ -50,13 +50,6 @@ function formatTime(timeStr: string | undefined): string {
   return `${hour.padStart(2, '0')}:${minute}`;
 }
 
-function looksLikeClassroom(text: string): boolean {
-  if (!text) return false;
-  const keywords = ['LAB', 'SCIENZE', 'PAL', 'TE', 'AULA', 'ROOM', 'PALAESTRA'];
-  const upper = text.toUpperCase();
-  return keywords.some(k => upper.includes(k)) || /\d/.test(text);
-}
-
 function cleanText(text: string): string {
   return text.replace(/\u00a0/g, '').trim();
 }
