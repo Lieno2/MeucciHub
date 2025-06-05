@@ -51,8 +51,8 @@ declare module '$env/static/private' {
 	export const MEMORY_PRESSURE_WATCH: string;
 	export const XDG_SESSION_CLASS: string;
 	export const npm_config_registry: string;
-	export const TERM: string;
 	export const USERNAME: string;
+	export const TERM: string;
 	export const GNOME_DESKTOP_SESSION_ID: string;
 	export const npm_config_node_gyp: string;
 	export const PATH: string;
@@ -65,7 +65,6 @@ declare module '$env/static/private' {
 	export const XDG_RUNTIME_DIR: string;
 	export const npm_config_frozen_lockfile: string;
 	export const DISPLAY: string;
-	export const STY: string;
 	export const LANG: string;
 	export const XDG_CURRENT_DESKTOP: string;
 	export const XMODIFIERS: string;
@@ -83,13 +82,11 @@ declare module '$env/static/private' {
 	export const QT_ACCESSIBILITY: string;
 	export const GDMSESSION: string;
 	export const LESSCLOSE: string;
-	export const WINDOW: string;
 	export const QT_IM_MODULE: string;
 	export const PWD: string;
 	export const npm_execpath: string;
 	export const XDG_CONFIG_DIRS: string;
 	export const XDG_DATA_DIRS: string;
-	export const TERMCAP: string;
 	export const npm_config__jsr_registry: string;
 	export const npm_command: string;
 	export const PNPM_SCRIPT_SRC_DIR: string;
@@ -153,8 +150,8 @@ declare module '$env/dynamic/private' {
 		MEMORY_PRESSURE_WATCH: string;
 		XDG_SESSION_CLASS: string;
 		npm_config_registry: string;
-		TERM: string;
 		USERNAME: string;
+		TERM: string;
 		GNOME_DESKTOP_SESSION_ID: string;
 		npm_config_node_gyp: string;
 		PATH: string;
@@ -167,7 +164,6 @@ declare module '$env/dynamic/private' {
 		XDG_RUNTIME_DIR: string;
 		npm_config_frozen_lockfile: string;
 		DISPLAY: string;
-		STY: string;
 		LANG: string;
 		XDG_CURRENT_DESKTOP: string;
 		XMODIFIERS: string;
@@ -185,13 +181,11 @@ declare module '$env/dynamic/private' {
 		QT_ACCESSIBILITY: string;
 		GDMSESSION: string;
 		LESSCLOSE: string;
-		WINDOW: string;
 		QT_IM_MODULE: string;
 		PWD: string;
 		npm_execpath: string;
 		XDG_CONFIG_DIRS: string;
 		XDG_DATA_DIRS: string;
-		TERMCAP: string;
 		npm_config__jsr_registry: string;
 		npm_command: string;
 		PNPM_SCRIPT_SRC_DIR: string;
